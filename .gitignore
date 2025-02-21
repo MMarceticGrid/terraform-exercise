@@ -1,0 +1,7 @@
+# Local Terraform state files
+*.tfstate
+*.tfstate.*
+
+# .terraform directories (where providers and modules are downloaded)
+.terraform/
+.terraform.*
