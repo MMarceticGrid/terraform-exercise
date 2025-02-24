@@ -5,3 +5,6 @@
 # .terraform directories (where providers and modules are downloaded)
 .terraform/
 .terraform.*
+
+#Secret_variables
+secret_variables.tf
