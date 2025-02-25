@@ -23,3 +23,56 @@ variable "region" {
 variable "network_name" {
   type = string
 }
+
+variable "forwarding_rule" {
+  type = map(object({
+    name        = string
+    port_range  = string
+    ip_protocol = string
+  }))
+}
+
+variable "health_check" {
+  type = map(object({
+    name                = string
+    timeout_sec         = number
+    check_interval_sec  = number
+    healthy_threshold   = number
+    unhealthy_threshold = number
+    tcp_health_check = object({
+      port = number
+    })
+  }))
+}
+
+variable "group_manager" {
+  type = map(object({
+    name = string
+    named_port = object({
+      name = string
+      port = number
+    })
+    base_instance_name = string
+  }))
+}
+
+variable "target_pool_name" {
+  type = string
+}
+
+variable "instance_template" {
+  type = map(object({
+    name = string
+    disk = object({
+      auto_delete = bool
+      boot        = bool
+    })
+  }))
+}
+variable "temp_compute_img_name" {
+  type = string
+}
+
+variable "environment" {
+  type = string
+}

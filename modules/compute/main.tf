@@ -1,5 +1,5 @@
 resource "google_compute_instance" "temp_vm" {
-  name         = "temp-vm"
+  name         = "${var.environment}temp-vm"
   machine_type = var.machine_type
   zone         = var.zone
   boot_disk {
@@ -14,8 +14,6 @@ resource "google_compute_instance" "temp_vm" {
   metadata = {
     startup-script = file("${path.module}/start_up.sh")
   }
-
-  tags = ["web-server"]
 }
 
 resource "null_resource" "stop_temp_vm" {
@@ -27,20 +25,20 @@ resource "null_resource" "stop_temp_vm" {
 }
 
 resource "google_compute_image" "temp_vm_image" {
-  name        = "custom-apache-image"
+  name        = var.temp_compute_img_name
   source_disk = google_compute_instance.temp_vm.boot_disk.0.source
 
   depends_on = [null_resource.stop_temp_vm]
 }
 
 resource "google_compute_instance_template" "web_instance_template" {
-  name         = "web-instance-template"
+  name         = var.instance_template["web_instance_template"].name
   machine_type = var.machine_type
   region       = var.region
 
   disk {
-    auto_delete  = true
-    boot         = true
+    auto_delete  = var.instance_template["web_instance_template"].disk.auto_delete
+    boot         = var.instance_template["web_instance_template"].disk.boot
     source_image = google_compute_image.temp_vm_image.self_link
   }
   network_interface {
@@ -50,42 +48,41 @@ resource "google_compute_instance_template" "web_instance_template" {
 }
 
 resource "google_compute_target_pool" "app_target_pool" {
-  name = "web-app-target-pool"
+  name = var.target_pool_name
 }
 
 resource "google_compute_instance_group_manager" "web_instance_group" {
-  name = "web-instance-group"
+  name = var.group_manager["web_instance_group"].name
   zone = var.zone
   version {
     instance_template = google_compute_instance_template.web_instance_template.self_link
   }
   target_pools = [google_compute_target_pool.app_target_pool.self_link]
   named_port {
-    name = "http"
-    port = 80
+    name = var.group_manager["web_instance_group"].named_port.name
+    port = var.group_manager["web_instance_group"].named_port.port
   }
-  base_instance_name = "web-instance"
+  base_instance_name = var.group_manager["web_instance_group"].base_instance_name
   target_size        = var.number_of_VMs
 }
 
 resource "google_compute_health_check" "app_health_check" {
-  name        = "app-health-check"
-  description = "Health check via tcp"
+  name = var.health_check["app_health_check"].name
 
-  timeout_sec         = 5
-  check_interval_sec  = 5
-  healthy_threshold   = 4
-  unhealthy_threshold = 5
+  timeout_sec         = var.health_check["app_health_check"].timeout_sec
+  check_interval_sec  = var.health_check["app_health_check"].check_interval_sec
+  healthy_threshold   = var.health_check["app_health_check"].healthy_threshold
+  unhealthy_threshold = var.health_check["app_health_check"].unhealthy_threshold
 
   tcp_health_check {
-    port = 80
+    port = var.health_check["app_health_check"].tcp_health_check.port
   }
 }
 
 resource "google_compute_forwarding_rule" "app_forwarding_rule" {
-  name        = "web-app-forwarding-rule"
+  name        = var.forwarding_rule["app_forwarding_rule"].name
   target      = google_compute_target_pool.app_target_pool.self_link
-  port_range  = "80"
-  ip_protocol = "TCP"
+  port_range  = var.forwarding_rule["app_forwarding_rule"].port_range
+  ip_protocol = var.forwarding_rule["app_forwarding_rule"].ip_protocol
   region      = var.region
 }
