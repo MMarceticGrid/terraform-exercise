@@ -19,3 +19,7 @@ variable "region" {
   description = "The region configuration"
   type        = string
 }
+
+variable "network_name" {
+  type = string
+}

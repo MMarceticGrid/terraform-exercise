@@ -9,19 +9,15 @@ resource "google_compute_instance" "temp_vm" {
   }
   network_interface {
     network = "default"
-    access_config {}
   }
-  metadata_startup_script = <<-EOF
-	#!/bin/bash
-	apt-get update -y
-	apt-get install -y apache2
-	echo "<h1>Hello from $(hostname)</h1>"> /var/www/html/index.html
-	systemctl enable apache2
-	systemctl start apache2
-	EOF
+
+  metadata = {
+    startup-script = file("${path.module}/start_up.sh")
+  }
 
   tags = ["web-server"]
 }
+
 resource "null_resource" "stop_temp_vm" {
   provisioner "local-exec" {
     command = "gcloud compute instances stop ${google_compute_instance.temp_vm.name} --zone=${google_compute_instance.temp_vm.zone}"
@@ -48,8 +44,7 @@ resource "google_compute_instance_template" "web_instance_template" {
     source_image = google_compute_image.temp_vm_image.self_link
   }
   network_interface {
-    network = "default"
-    access_config {}
+    network = var.network_name
   }
 
 }
