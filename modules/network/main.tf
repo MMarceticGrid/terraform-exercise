@@ -1,37 +1,26 @@
 resource "google_compute_network" "main" {
-  name = "main-network"
+  name = var.network_name
 }
 
-resource "google_compute_subnetwork" "main" {
-  name          = "main-subnetwork"
+resource "google_compute_subnetwork" "subnets" {
+  for_each = var.subnets
+
+  name          = "${each.value.name}-subnet"
   network       = google_compute_network.main.self_link
-  region        = var.region
-  ip_cidr_range = "10.0.0.0/24"
+  region        = each.value.region
+  ip_cidr_range = each.value.cidr_range
 }
 
-resource "google_compute_firewall" "allow_http" {
-  name    = "mn-allow-http"
+resource "google_compute_firewall" "firewall_rules" {
+  for_each = var.firewall_rules
+
+  name    = each.value.name
   network = google_compute_network.main.self_link
-
   allow {
-    protocol = "tcp"
-    ports    = ["80"]
+    protocol = each.value.allowed.protocol
+    ports    = each.value.allowed.ports
   }
-
-  source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["web-server"]
-}
-
-resource "google_compute_firewall" "allow_load_balancer" {
-  name    = "mn-allow-lb"
-  network = google_compute_network.main.self_link
-
-  allow {
-    protocol = "tcp"
-    ports    = ["80"]
-  }
-
-  source_ranges = ["203.0.113.0/24"]
-  target_tags   = ["web-server"]
+  source_ranges = each.value.source_ranges
+  target_tags   = each.value.target_tags
 }
 
