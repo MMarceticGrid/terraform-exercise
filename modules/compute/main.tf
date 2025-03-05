@@ -4,11 +4,12 @@ resource "google_compute_instance" "temp_vm" {
   zone         = var.zone
   boot_disk {
     initialize_params {
-      image = "debian-11-bullseye-v20220118"
+      image = var.vm_image
     }
   }
   network_interface {
     network = "default"
+    access_config {}
   }
 
   metadata = {
@@ -44,11 +45,16 @@ resource "google_compute_instance_template" "web_instance_template" {
   network_interface {
     network = var.network_name
   }
-
-}
-
-resource "google_compute_target_pool" "app_target_pool" {
-  name = var.target_pool_name
+  service_account {
+    scopes = [
+      "service-management",
+      "compute-rw",
+      "storage-ro",
+      "logging-write",
+      "monitoring-write",
+      "service-control",
+    ]
+  }
 }
 
 resource "google_compute_instance_group_manager" "web_instance_group" {
@@ -57,13 +63,33 @@ resource "google_compute_instance_group_manager" "web_instance_group" {
   version {
     instance_template = google_compute_instance_template.web_instance_template.self_link
   }
-  target_pools = [google_compute_target_pool.app_target_pool.self_link]
   named_port {
     name = var.group_manager["web_instance_group"].named_port.name
     port = var.group_manager["web_instance_group"].named_port.port
   }
   base_instance_name = var.group_manager["web_instance_group"].base_instance_name
   target_size        = var.number_of_VMs
+}
+
+resource "google_compute_backend_service" "web_map_backend_service" {
+  name          = var.web_map_backend_service.name
+  protocol      = var.web_map_backend_service.protocol
+  port_name     = var.web_map_backend_service.port_name
+  health_checks = [google_compute_health_check.app_health_check.id]
+
+  backend {
+    group = google_compute_instance_group_manager.web_instance_group.instance_group
+  }
+}
+
+resource "google_compute_url_map" "web_map" {
+  name            = var.web_map_name
+  default_service = google_compute_backend_service.web_map_backend_service.self_link
+}
+
+resource "google_compute_target_http_proxy" "http_lb_proxy" {
+  name    = var.lb_proxy_name
+  url_map = google_compute_url_map.web_map.self_link
 }
 
 resource "google_compute_health_check" "app_health_check" {
@@ -79,10 +105,9 @@ resource "google_compute_health_check" "app_health_check" {
   }
 }
 
-resource "google_compute_forwarding_rule" "app_forwarding_rule" {
+resource "google_compute_global_forwarding_rule" "app_forwarding_rule" {
   name        = var.forwarding_rule["app_forwarding_rule"].name
-  target      = google_compute_target_pool.app_target_pool.self_link
+  target      = google_compute_target_http_proxy.http_lb_proxy.self_link
   port_range  = var.forwarding_rule["app_forwarding_rule"].port_range
   ip_protocol = var.forwarding_rule["app_forwarding_rule"].ip_protocol
-  region      = var.region
 }

@@ -12,7 +12,12 @@ variable "zone" {
 
 variable "network_name" {
   type    = string
-  default = "main-network"
+  default = "mmarcetic-network"
+}
+
+variable "vm_image" {
+  type    = string
+  default = "debian-11-bullseye-v20220118"
 }
 
 variable "subnets" {
@@ -44,7 +49,6 @@ variable "firewall_rules" {
       ports    = list(string)
     })
     source_ranges = list(string)
-    target_tags   = list(string)
   }))
   default = {
     "allow-lb" = {
@@ -58,7 +62,6 @@ variable "firewall_rules" {
         "35.191.0.0/16",
         "35.202.66.202"
       ]
-      target_tags = ["web-server"]
     },
     "allow-http" = {
       name = "mm-allow-http"
@@ -71,7 +74,6 @@ variable "firewall_rules" {
         "35.191.0.0/16",
         "35.202.66.202"
       ]
-      target_tags = ["web-server"]
     },
     "allow-ssh-from-iap" = {
       name = "mm-allow-ssh-from-iap"
@@ -80,9 +82,17 @@ variable "firewall_rules" {
         ports    = ["22"]
       }
       source_ranges = [
-        "35.235.240.0/20"
+        "35.235.240.0/20",
+        "35.202.66.202"
       ]
-      target_tags = ["web-server"]
+    },
+    "allow-ssh-internal" = {
+      name    = "allow-ssh-internal"
+      allowed = {
+        protocol = "tcp"
+        ports    = ["22"]
+      }
+      source_ranges = ["10.128.0.0/9"]
     }
   }
 }
@@ -140,7 +150,7 @@ variable "group_manager" {
   }))
   default = {
     "web_instance_group" = {
-      name = "web-instance-group"
+      name = "mm-instance-group"
       named_port = {
         name = "http"
         port = 80
@@ -148,11 +158,6 @@ variable "group_manager" {
       base_instance_name = "web-instance"
     }
   }
-}
-
-variable "target_pool_name" {
-  type    = string
-  default = "web-app-target-pool"
 }
 
 variable "instance_template" {
@@ -179,5 +184,63 @@ variable "temp_compute_img_name" {
 
 variable "environment" {
   type    = string
-  default = "test"
+  default = "test-"
+}
+
+variable "compute_router_name" {
+  type    = string
+  default = "nat-router-us-central1"
+}
+
+variable "compute_router_nat" {
+  type = map(object({
+    name                               = string
+    nat_ip_allocate_option             = string
+    source_subnetwork_ip_ranges_to_nat = string
+  }))
+  default = {
+    "nat_config1" = {
+      name                               = "nat-config1"
+      nat_ip_allocate_option             = "AUTO_ONLY"
+      source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+    }
+  }
+}
+variable "services" {
+  type = list(string)
+  default = [ 
+    "cloudapis.googleapis.com",
+    "compute.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "oslogin.googleapis.com",
+    "pubsub.googleapis.com",
+    "servicemanagement.googleapis.com",
+    "serviceusage.googleapis.com",
+    "storage-api.googleapis.com",
+    "storage-component.googleapis.com"
+  ]
+}
+
+variable "web_map_backend_service" {
+  type = object({
+    name = string
+    protocol = string
+    port_name = string
+  })
+  default = {
+    name          = "web-map-backend-service"
+    protocol      = "HTTP"
+    port_name     = "http"
+  }
+}
+
+variable "web_map_name" {
+  type = string
+  default = "web-map"
+}
+
+variable "lb_proxy_name" {
+  type = string
+  default = "http-lb-proxy"
 }

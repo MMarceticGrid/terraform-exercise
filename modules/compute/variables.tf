@@ -1,13 +1,17 @@
 variable "number_of_VMs" {
   type        = number
   description = "Number of VMs"
-  default     = 3
+  default     = 2
 }
 
 variable "machine_type" {
   type        = string
   description = "Type of VM"
   default     = "f1-micro"
+}
+
+variable "vm_image" {
+  type = string
 }
 
 variable "zone" {
@@ -56,10 +60,6 @@ variable "group_manager" {
   }))
 }
 
-variable "target_pool_name" {
-  type = string
-}
-
 variable "instance_template" {
   type = map(object({
     name = string
@@ -74,5 +74,21 @@ variable "temp_compute_img_name" {
 }
 
 variable "environment" {
+  type = string
+}
+
+variable "web_map_backend_service" {
+  type = object({
+    name = string
+    protocol = string
+    port_name = string
+  })
+}
+
+variable "web_map_name" {
+  type = string
+}
+
+variable "lb_proxy_name" {
   type = string
 }

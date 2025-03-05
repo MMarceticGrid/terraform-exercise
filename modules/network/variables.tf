@@ -19,6 +19,21 @@ variable "firewall_rules" {
       ports    = list(string)
     })
     source_ranges = list(string)
-    target_tags   = list(string)
+  }))
+}
+
+variable "region" {
+  type = string
+}
+
+variable "compute_router_name" {
+  type = string
+}
+
+variable "compute_router_nat" {
+  type = map(object({
+    name                               = string
+    nat_ip_allocate_option             = string
+    source_subnetwork_ip_ranges_to_nat = string
   }))
 }

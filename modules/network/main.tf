@@ -21,6 +21,18 @@ resource "google_compute_firewall" "firewall_rules" {
     ports    = each.value.allowed.ports
   }
   source_ranges = each.value.source_ranges
-  target_tags   = each.value.target_tags
 }
 
+resource "google_compute_router" "nat-router-us-central1" {
+  name    = var.compute_router_name
+  region  = var.region
+  network = google_compute_network.main.self_link
+}
+
+resource "google_compute_router_nat" "nat-config1" {
+  name                               = var.compute_router_nat["nat_config1"].name
+  router                             = google_compute_router.nat-router-us-central1.name
+  region                             = var.region
+  nat_ip_allocate_option             = var.compute_router_nat["nat_config1"].nat_ip_allocate_option
+  source_subnetwork_ip_ranges_to_nat = var.compute_router_nat["nat_config1"].source_subnetwork_ip_ranges_to_nat
+}
